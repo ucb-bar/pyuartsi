@@ -52,9 +52,11 @@ options:
 
 ## Errata
 
-The last `printf()` syscall on the DUT program will be printed twice for some reason.
+- The last `printf()` syscall on the DUT program will be printed twice for some reason.
 
-Always reset DUT before launching new program.
+- Always reset DUT before launching new program.
+
+- The Proxy FESVR currently only supports `_write()` and `_exit()` syscall.
 
 
 ## See Also

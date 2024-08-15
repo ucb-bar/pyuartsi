@@ -23,7 +23,7 @@ pip install .
 ## Usage
 
 ```bash
-usage: uart_tsi.py [-h] --port PORT [--baudrate BAUDRATE] [--init_write INIT_WRITE] [--init_read INIT_READ]
+usage: python -m uart_tsi [-h] --port PORT [--baudrate BAUDRATE] [--init_write INIT_WRITE] [--init_read INIT_READ]
                    [--elf ELF] [--load] [--selfcheck] [--hart0_msip] [--fesvr] [--cflush_addr CFLUSH_ADDR]
 examples: ./uart_tsi --port COM20 --elf <program.elf> --load --hart0_msip
           ./uart_tsi --port /dev/ttyxx --init_read 0x02000000

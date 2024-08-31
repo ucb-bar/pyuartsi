@@ -113,9 +113,14 @@ examples: ./uart_tsi --port COM20 --elf <program.elf> --load --hart0_msip
                 except UnicodeDecodeError:
                     print(char_buffer, end="")
 
-                tsi.write_longword(fromhost, 0x1, flush_cache=True)
-
             elif syscall_id == FESVR_SYSCALLS.exit:
                 print("DUT exit.")
                 exit()
             
+            else:
+                print("Invalid syscall:", syscall_id)
+
+            # signal the chip that the request has been processed
+            tsi.write_longword(tohost, 0)
+            tsi.write_longword(fromhost, 0x1, flush_cache=True)
+                

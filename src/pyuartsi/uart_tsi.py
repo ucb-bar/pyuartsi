@@ -133,7 +133,7 @@ class UARTTSI():
         self.ser = SerialImpl(port, baudrate)
         self.cflush_addr = cflush_addr
     
-    def _write_header(self, command: Command, addr: int, size: int = 0):
+    def _write_header(self, command: Command, addr: int, size: int = 0) -> None:
         """
         Write a header to the UART TSI.
         
@@ -163,7 +163,7 @@ class UARTTSI():
         buffer = self.ser.read(size + n_padding)
         return buffer[:size]
 
-    def _write_payload(self, data: bytes):
+    def _write_payload(self, data: bytes) -> None:
         """
         Write chunks of data to the UART TSI.
 

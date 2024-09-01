@@ -23,11 +23,11 @@ if __name__ == "__main__":
     # change message shown on --help
     parser.usage = """python -m pyuartsi [-h] --port PORT [--baudrate BAUDRATE] [--init_write INIT_WRITE] [--init_read INIT_READ]
                    [--elf ELF] [--load] [--selfcheck] [--hart0_msip] [--fesvr] [--cflush_addr CFLUSH_ADDR]
-examples: python -m barstools.uartsi --port COM20 --elf <program.elf> --load --hart0_msip
-          python -m barstools.uartsi --port /dev/ttyxx --init_read 0x02000000
-          python -m barstools.uartsi --port /dev/ttyxx --init_write 0x80000000:0xdeadbeef --init_read 0x80000000
-          python -m barstools.uartsi --port /dev/ttyxx --elf <program.elf> --load --hart0_msip --fesvr
-          python -m barstools.uartsi --port /dev/ttyxx --baudrate 921600 --elf <program.elf> --load --selfcheck --hart0_msip --fesvr --cflush_addr 0x02010200
+examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msip
+          python -m pyuartsi --port /dev/ttyxx --init_read 0x02000000
+          python -m pyuartsi --port /dev/ttyxx --init_write 0x80000000:0xdeadbeef --init_read 0x80000000
+          python -m pyuartsi --port /dev/ttyxx --elf <program.elf> --load --hart0_msip --fesvr
+          python -m pyuartsi --port /dev/ttyxx --baudrate 921600 --elf <program.elf> --load --selfcheck --hart0_msip --fesvr --cflush_addr 0x02010200
 """
 
     args = parser.parse_args()

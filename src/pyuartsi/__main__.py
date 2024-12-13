@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("--selfcheck", help="Run self-check to verify the loaded ELF program", action="store_true")
     parser.add_argument("--hart0_msip", help="Hart0 MSIP register", action="store_true")
     parser.add_argument("--fesvr", help="Run the FESVR interface", action="store_true")
-    parser.add_argument("--cflush_addr", help="Cache control base address", type=int, default=0x02010200)
+    parser.add_argument("--cflush_addr", help="Cache control base address", type=str, default=0x02010200)
 
     # change message shown on --help
     parser.usage = """python -m pyuartsi [-h] --port PORT [--baudrate BAUDRATE] [--init_write INIT_WRITE] [--init_read INIT_READ]
@@ -82,11 +82,14 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
             if request_ptr == 1 or request_ptr == 0x10000 or request_ptr == 0x13030:
                 print("DUT forcefuly exit")
                 exit()
-
+            
+            if request_ptr == 3:
+                print("malloc")
+                continue
             # print("{0:2f}".format(t), "\treq ptr:", hex(request_ptr))
 
             if request_ptr < 0x80000000:
-                print("Invalid request pointer")
+                print("Invalid request pointer:", hex(request_ptr))
                 continue
 
             

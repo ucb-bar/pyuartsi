@@ -122,7 +122,7 @@ class UARTTSI():
         """
         return (addr + 3) & ~3
     
-    def __init__(self, port: str, baudrate: int, cflush_addr: int = 0x02010200) -> None:
+    def __init__(self, port: str, baudrate: int, cflush_addr: int | str = 0x02010200) -> None:
         """
         Initialize the UARTTSI object.
         
@@ -131,6 +131,10 @@ class UARTTSI():
             baudrate (int): Baudrate to use
         """
         self.ser = SerialImpl(port, baudrate)
+        
+        if isinstance(cflush_addr, str):
+            cflush_addr = int(cflush_addr, 16)
+        
         self.cflush_addr = cflush_addr
     
     def _write_header(self, command: Command, addr: int, size: int = 0) -> None:

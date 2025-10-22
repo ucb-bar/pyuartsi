@@ -1,6 +1,4 @@
-# PyUARTSI
-
-A standalone implementation of the Tethered Serial Interface (TSI) in Python.
+![PyUARTSI](assets/banner.png)
 
 
 ## Installation

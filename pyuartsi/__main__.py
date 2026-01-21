@@ -1,6 +1,6 @@
 import struct
 import time
-from ctypes import *
+from ctypes import *  # noqa: F401, F403
 
 from .uart_tsi import UARTTSI, FESVR_SYSCALLS
 
@@ -28,7 +28,7 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
           python -m pyuartsi --port /dev/ttyxx --init_write 0x80000000:0xdeadbeef --init_read 0x80000000
           python -m pyuartsi --port /dev/ttyxx --elf <program.elf> --load --hart0_msip --fesvr
           python -m pyuartsi --port /dev/ttyxx --baudrate 921600 --elf <program.elf> --load --selfcheck --hart0_msip --fesvr --cflush_addr 0x02010200
-"""
+"""  # noqa: E501
 
     args = parser.parse_args()
 
@@ -36,7 +36,7 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
 
     if args.load:
         tsi.load_elf(args.elf, args.selfcheck)
-    
+
     if args.init_write:
         addr, value = args.init_write.split("=")
         addr = int(addr, 16)
@@ -44,14 +44,14 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
 
         tsi.write_word(addr, value)
         print(f"W: {addr:#x} <= {value:#x}")
-    
+
     if args.hart0_msip:
         tsi.write_longword(0x1000, 0x80000000)
 
         CLINT_BASE = 0x2000000
         tsi.write_word(CLINT_BASE, 0x01)
         print("Wrote to hart0 MSIP register")
-    
+
     if args.init_read:
         addr = int(args.init_read, 16)
         value = tsi.read_word(addr)
@@ -64,25 +64,25 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
         # htif_base = 0x70000000
 
         print(f"Found HTIF section at {htif_base:#x}")
-        
+
         tohost = htif_base + 0
         fromhost = htif_base + 8
-        
+
         tsi.write_longword(tohost, 0)
-        
+
         while True:
             t = time.time() - start_t
 
             request_ptr = tsi.read_longword(tohost, flush_cache=True)
             # tsi.write_longword(tohost, 0, flush_cache=True)
-            
+
             if request_ptr == 0:
                 continue
-            
+
             if request_ptr == 1 or request_ptr == 0x10000 or request_ptr == 0x13030:
                 print("DUT forcefuly exit")
                 exit()
-            
+
             if request_ptr == 3:
                 print("malloc")
                 continue
@@ -92,7 +92,6 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
                 print("Invalid request pointer:", hex(request_ptr))
                 continue
 
-            
             request_buffer = tsi.read_bytes(request_ptr, 8 * 4, flush_cache=True)
             request_args = struct.unpack("<4Q", request_buffer)
 
@@ -107,7 +106,7 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
                 fd = a0
                 string_ptr = a1
                 size = a2
-                
+
                 char_buffer = tsi.read_bytes(string_ptr, size, flush_cache=True)
 
                 try:
@@ -119,11 +118,10 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
             elif syscall_id == FESVR_SYSCALLS.exit:
                 print("DUT exit.")
                 exit()
-            
+
             else:
                 print("Invalid syscall:", syscall_id)
 
             # signal the chip that the request has been processed
             tsi.write_longword(tohost, 0)
             tsi.write_longword(fromhost, 0x1, flush_cache=True)
-                

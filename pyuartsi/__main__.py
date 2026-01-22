@@ -25,7 +25,7 @@ if __name__ == "__main__":
                    [--elf ELF] [--load] [--selfcheck] [--hart0_msip] [--fesvr] [--cflush_addr CFLUSH_ADDR]
 examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msip
           python -m pyuartsi --port /dev/ttyxx --init_read 0x02000000
-          python -m pyuartsi --port /dev/ttyxx --init_write 0x80000000:0xdeadbeef --init_read 0x80000000
+          python -m pyuartsi --port /dev/ttyxx --init_write 0x80000000=0xdeadbeef --init_read 0x80000000
           python -m pyuartsi --port /dev/ttyxx --elf <program.elf> --load --hart0_msip --fesvr
           python -m pyuartsi --port /dev/ttyxx --baudrate 921600 --elf <program.elf> --load --selfcheck --hart0_msip --fesvr --cflush_addr 0x02010200
 """  # noqa: E501

@@ -2,8 +2,8 @@ import struct
 import time
 from ctypes import *  # noqa: F401, F403
 
-from .uart_tsi import UARTTSI, FESVR_SYSCALLS
-
+from .tsi import FESVR_SYSCALLS
+from .uart_tsi import UARTTSI
 
 if __name__ == "__main__":
     import argparse
@@ -46,7 +46,7 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
         print(f"W: {addr:#x} <= {value:#x}")
 
     if args.hart0_msip:
-        tsi.write_longword(0x1000, 0x80000000)
+        #tsi.write_longword(0x1000, 0x80000000)
 
         CLINT_BASE = 0x2000000
         tsi.write_word(CLINT_BASE, 0x01)
@@ -68,7 +68,7 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
         tohost = htif_base + 0
         fromhost = htif_base + 8
 
-        tsi.write_longword(tohost, 0)
+        # tsi.write_longword(tohost, 0)
 
         while True:
             t = time.time() - start_t

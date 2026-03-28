@@ -4,12 +4,13 @@ from ctypes import *  # noqa: F401, F403
 
 from .tsi import FESVR_SYSCALLS
 from .uart_tsi import UARTTSI
+from .spi_tsi  import SPITSI
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Python port of UART-based TSI")
-    parser.add_argument("--port", help="Serial port to connect to", required=True)
+    parser.add_argument("--port", help="Serial port to connect to")
     parser.add_argument("--baudrate", type=int, help="Baudrate to use", default=115200)
     parser.add_argument("--init_write", help="Write an initial value to an address", type=str)
     parser.add_argument("--init_read", help="Read an initial value from an address", type=str)
@@ -19,6 +20,10 @@ if __name__ == "__main__":
     parser.add_argument("--hart0_msip", help="Hart0 MSIP register", action="store_true")
     parser.add_argument("--fesvr", help="Run the FESVR interface", action="store_true")
     parser.add_argument("--cflush_addr", help="Cache control base address", type=str, default=0x02010200)
+    parser.add_argument("--spi", help="Use SPI as the TSI transport protocol", action="store_true")
+    parser.add_argument("--list_spi", help="List all plugged in FTDI devices able to be used with SPI-TSI", action="store_true")
+    parser.add_argument("--spi_url", help="Specify FTDI Chip URL", type=str, default='ftdi:///1')
+    parser.add_argument("--spi_freq", help="Specify SPI Frequency", type=int, default=10E6)
 
     # change message shown on --help
     parser.usage = """python -m pyuartsi [-h] --port PORT [--baudrate BAUDRATE] [--init_write INIT_WRITE] [--init_read INIT_READ]
@@ -31,8 +36,17 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
 """  # noqa: E501
 
     args = parser.parse_args()
+    if args.list_spi:
+        SPITSI.list_devices()
+        exit(0)
+    
+    if args.port is None and not args.spi:
+        parser.error("at least one of --port and --spi required")
 
-    tsi = UARTTSI(args.port, args.baudrate, args.cflush_addr)
+    if args.spi:
+        tsi = SPITSI(args.spi_url, args.spi_freq, args.cflush_addr)
+    else:
+        tsi = UARTTSI(args.port, args.baudrate, args.cflush_addr)
 
     if args.load:
         tsi.load_elf(args.elf, args.selfcheck)

@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--selfcheck", help="Run self-check to verify the loaded ELF program", action="store_true")
     parser.add_argument("--hart0_msip", help="Hart0 MSIP register", action="store_true")
     parser.add_argument("--fesvr", help="Run the FESVR interface", action="store_true")
+    parser.add_argument("--no_cflush", help="Disable flushing the Cache", action="store_true")
     parser.add_argument("--cflush_addr", help="Cache control base address", type=str, default=0x02010200)
     parser.add_argument("--spi", help="Use SPI as the TSI transport protocol", action="store_true")
     parser.add_argument("--list_spi", help="List all plugged in FTDI devices able to be used with SPI-TSI", action="store_true")
@@ -36,12 +37,18 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
 """  # noqa: E501
 
     args = parser.parse_args()
+    do_cflush = True
+
     if args.list_spi:
         SPITSI.list_devices()
         exit(0)
     
     if args.port is None and not args.spi:
         parser.error("at least one of --port and --spi required")
+
+    if args.no_cflush:
+        args.cflush_addr = 0x0
+        do_cflush = False
 
     if args.spi:
         tsi = SPITSI(args.spi_url, args.spi_freq, args.cflush_addr)
@@ -87,8 +94,8 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
         while True:
             t = time.time() - start_t
 
-            request_ptr = tsi.read_longword(tohost, flush_cache=True)
-            # tsi.write_longword(tohost, 0, flush_cache=True)
+            request_ptr = tsi.read_longword(tohost, flush_cache=do_cflush)
+            # tsi.write_longword(tohost, 0, flush_cache=do_cflush)
 
             if request_ptr == 0:
                 continue
@@ -106,7 +113,7 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
                 print("Invalid request pointer:", hex(request_ptr))
                 continue
 
-            request_buffer = tsi.read_bytes(request_ptr, 8 * 4, flush_cache=True)
+            request_buffer = tsi.read_bytes(request_ptr, 8 * 4, flush_cache=do_cflush)
             request_args = struct.unpack("<4Q", request_buffer)
 
             syscall_id = request_args[0]
@@ -121,7 +128,7 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
                 string_ptr = a1
                 size = a2
 
-                char_buffer = tsi.read_bytes(string_ptr, size, flush_cache=True)
+                char_buffer = tsi.read_bytes(string_ptr, size, flush_cache=do_cflush)
 
                 try:
                     char = char_buffer.decode("utf-8")
@@ -138,4 +145,4 @@ examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msi
 
             # signal the chip that the request has been processed
             tsi.write_longword(tohost, 0)
-            tsi.write_longword(fromhost, 0x1, flush_cache=True)
+            tsi.write_longword(fromhost, 0x1, flush_cache=do_cflush)

@@ -5,7 +5,7 @@ from .tsi import TSI, Command
 from pyftdi.ftdi import Ftdi
 from pyftdi.spi import *
 
-class SPITSI():
+class SPITSI(TSI):
     def list_devices():
         Ftdi.show_devices()
 

@@ -89,8 +89,7 @@ class TSI():
         size = 4
         if flush_cache and self.cflush_addr != 0:
             self.flush_cache_lines(addr, size)
-        self._write_header(Command.read, addr, size)
-        buffer = self.ser.read(size)
+        buffer = self._read_bytes(addr, size)
         value = struct.unpack("<I", buffer)[0]
 
         return value
@@ -105,8 +104,7 @@ class TSI():
         size = 8
         if flush_cache and self.cflush_addr != 0:
             self.flush_cache_lines(addr, size)
-        self._write_header(Command.read, addr, size)
-        buffer = self.ser.read(size)
+        buffer = self._read_bytes(addr, size)
         value = struct.unpack("<Q", buffer)[0]
 
         return value
@@ -134,7 +132,7 @@ class TSI():
         if flush_cache and self.cflush_addr != 0:
             self.flush_cache_lines(addr, 4)
         buffer = struct.pack("<I", data)
-        self.write_bytes(addr, buffer)
+        self._write_bytes(addr, buffer)
 
     def write_longword(self, addr: int, data: int, flush_cache: bool = False) -> None:
         """
@@ -147,7 +145,7 @@ class TSI():
         if flush_cache and self.cflush_addr != 0:
             self.flush_cache_lines(addr, 8)
         buffer = struct.pack("<Q", data)
-        self.write_bytes(addr, buffer)
+        self._write_bytes(addr, buffer)
 
     def load_elf(self, filename: str, check: bool = False) -> None:
         """

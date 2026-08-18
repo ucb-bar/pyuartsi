@@ -298,7 +298,8 @@ class UARTTSI():
             elf_file = ELFFile(f)
 
             for section in elf_file.iter_sections():
-                if (section.header.get("sh_type") == "SHT_PROGBITS" and section.header.get("sh_addr") > 0):
+                # if (section.header.get("sh_type") == "SHT_PROGBITS" and section.header.get("sh_addr") > 0):
+                if section.header.get("sh_addr") > 0 and "noinit" not in section.name:
 
                     data = section.data()
 
@@ -345,3 +346,37 @@ class UARTTSI():
                     break
 
         return htif_base
+
+    def get_symbol_addresses(self, filename: str, *symbols) -> list[int]:
+        """
+        Get the addresses of specified symbols from the ELF file.
+
+        Args:
+            filename (str): ELF file to load
+            *symbols: Variable number of symbol names
+
+        Returns:
+            list[int]: List of addresses for the symbols
+
+        Raises:
+            ValueError: If symbol table is not found or a symbol is not found
+        """
+        with open(filename, "rb") as f:
+            elf_file = ELFFile(f)
+
+            symbol_table = elf_file.get_section_by_name('.symtab')
+            if not symbol_table:
+                raise ValueError("No symbol table found in ELF file")
+
+            addresses = []
+            for symbol in symbols:
+                addr = None
+                for sym in symbol_table.iter_symbols():
+                    if sym.name == symbol:
+                        addr = sym.entry['st_value']
+                        break
+                if addr is None:
+                    raise ValueError(f"Symbol '{symbol}' not found in ELF file")
+                addresses.append(addr)
+
+            return addresses

@@ -26,5 +26,8 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/ucb-bar/pyuartsi"
 
+[project.scripts]
+pyuartsi = "pyuartsi.__main__:main"
+
 [tool.hatchling.build.targets.wheel]
 packages = ["pyuartsi"]

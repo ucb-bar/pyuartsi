@@ -1,30 +1,124 @@
 [build-system]
-requires = ["hatchling >= 1.26"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.12.10,<0.13"]
+build-backend = "uv_build"
 
 [project]
 name = "pyuartsi"
-version = "2026.01.20"
-dependencies = [
-    "pyserial",
-    "pyelftools",
-    "rich",
-]
-requires-python = ">=3.10"
-authors = [
-    { name = "-T.K.-", email = "t_k_233@outlook.email" }
-]
+version = "2026.1.20"
 description = "A standalone implementation of the Tethered Serial Interface (TSI) in Python."
 readme = "README.md"
-license = {file = "LICENSE"}
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = [
+    "embedded",
+    "risc-v",
+    "serial",
+    "tsi",
+    "uart",
+]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Development Status :: 4 - Beta",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pyelftools>=0.30",
+    "pyserial>=3.5",
+    "rich>=13.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/ucb-bar/pyuartsi"
+[[project.authors]]
+name = "-T.K.-"
+email = "t_k_233@outlook.email"
 
-[tool.hatchling.build.targets.wheel]
-packages = ["pyuartsi"]
+[project.scripts]
+pyuartsi = "pyuartsi.cli:main"
+
+[project.urls]
+Changelog = "https://github.com/ucb-bar/pyuartsi/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/ucb-bar/pyuartsi#readme"
+Homepage = "https://github.com/ucb-bar/pyuartsi"
+Issues = "https://github.com/ucb-bar/pyuartsi/issues"
+Repository = "https://github.com/ucb-bar/pyuartsi.git"
+
+[dependency-groups]
+lint = ["ruff>=0.14.0"]
+test = [
+    "pytest>=8.0",
+    "pytest-cov>=6.0",
+]
+typing = [
+    "mypy>=1.15",
+    "types-pyserial>=3.5.0",
+]
+
+[[dependency-groups.dev]]
+include-group = "lint"
+
+[[dependency-groups.dev]]
+include-group = "test"
+
+[[dependency-groups.dev]]
+include-group = "typing"
+
+[tool.uv.build-backend]
+source-include = [
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "tests/**",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "B",
+    "D",
+    "E",
+    "F",
+    "I",
+    "N",
+    "RUF",
+    "SIM",
+    "UP",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = [
+    "src",
+    "tests",
+]
+
+[[tool.mypy.overrides]]
+module = "elftools.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers -m 'not hardware' --cov=src/pyuartsi --cov-report=term-missing"
+testpaths = ["tests"]
+markers = ["hardware: requires a connected UART TSI device"]
+
+[tool.coverage.run]
+branch = true
+source_dirs = ["src/pyuartsi"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true

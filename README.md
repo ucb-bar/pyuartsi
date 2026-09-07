@@ -1,65 +1,100 @@
-![PyUARTSI](assets/banner.png)
+![PyUARTSI](https://raw.githubusercontent.com/ucb-bar/pyuartsi/main/assets/banner.png)
 
+# PyUARTSI
+
+PyUARTSI is a typed Python implementation of the UART-based Tethered Serial
+Interface (TSI). It can read and write target memory, load ELF files, verify
+loaded data, initialize hart 0, and proxy the supported FESVR calls.
+
+PyUARTSI requires Python 3.10 or newer and runs on platforms supported by
+[pyserial](https://pyserial.readthedocs.io/).
 
 ## Installation
 
-Install from PyPI
+Add PyUARTSI to a uv project:
 
-```bash
-pip install pyuartsi
+```console
+uv add pyuartsi
 ```
 
-Install from repo
+Or install it with pip:
 
-```bash
-git clone https://github.com/ucb-bar/pyuartsi.git
-cd ./pyuartsi/
-pip install .
+```console
+python -m pip install pyuartsi
 ```
 
+## Command-line usage
 
-## Usage
+The installed command and module entry point are equivalent:
 
-```bash
-usage: python -m pyuartsi [-h] --port PORT [--baudrate BAUDRATE] [--init_write INIT_WRITE] [--init_read INIT_READ]
-                   [--elf ELF] [--load] [--selfcheck] [--hart0_msip] [--fesvr] [--cflush_addr CFLUSH_ADDR]
-examples: python -m pyuartsi --port COM20 --elf <program.elf> --load --hart0_msip
-          python -m pyuartsi --port /dev/ttyxx --init_read 0x02000000
-          python -m pyuartsi --port /dev/ttyxx --init_write 0x80000000=0xdeadbeef --init_read 0x80000000
-          python -m pyuartsi --port /dev/ttyxx --elf <program.elf> --load --hart0_msip --fesvr
-          python -m pyuartsi --port /dev/ttyxx --baudrate 921600 --elf <program.elf> --load --selfcheck --hart0_msip --fesvr --cflush_addr 0x02010200
-
-Python port of UART-based TSI
-
-options:
-  -h, --help            show this help message and exit
-  --port PORT           Serial port to connect to
-  --baudrate BAUDRATE   Baudrate to use
-  --init_write INIT_WRITE
-                        Write an initial value to an address
-  --init_read INIT_READ
-                        Read an initial value from an address
-  --elf ELF             Specify ELF file to load
-  --load                Load the ELF file to target
-  --selfcheck           Run self-check to verify the loaded ELF program
-  --hart0_msip          Hart0 MSIP register
-  --fesvr               Run the FESVR interface
-  --cflush_addr CFLUSH_ADDR
-                        Cache control base address
+```console
+uv run pyuartsi --help
+uv run python -m pyuartsi --help
 ```
 
-## Errata
+Load and verify an ELF file:
 
-- The last `printf()` syscall on the DUT program will be printed twice for some reason.
+```console
+uv run pyuartsi --port COM20 --elf program.elf --load --self-check
+```
 
-- Always reset DUT before launching new program.
+Read and write target memory:
 
-- The Proxy FESVR currently only supports `_write()` and `_exit()` syscall.
+```console
+uv run pyuartsi --port /dev/ttyUSB0 --init-read 0x02000000
+uv run pyuartsi --port /dev/ttyUSB0 \
+  --init-write 0x80000000=0xdeadbeef \
+  --init-read 0x80000000
+```
 
+The default serial read and write timeout is 10 seconds. Use `--timeout` to
+change it. Underscore spellings of legacy options remain available for
+compatibility, but new scripts should use hyphenated options.
 
-## See Also
+## Python API
 
-C++ implementation [uart_tsi](https://github.com/ucb-bar/testchipip/tree/master/uart_tsi)
+Use the connection as a context manager so the serial port is always closed:
 
-Rust implementation [TSI](https://github.com/ucb-bar/tsi)
+```python
+from pyuartsi import UARTTSI
+
+with UARTTSI("/dev/ttyUSB0", 115_200, timeout=10.0) as tsi:
+    tsi.write_word(0x80000000, 0xDEADBEEF)
+    assert tsi.read_word(0x80000000) == 0xDEADBEEF
+```
+
+All library-specific exceptions inherit from `PyUARTSIError`. Transport
+timeouts raise `TransportTimeoutError`, protocol failures raise
+`ProtocolError`, and ELF read-back mismatches raise `ELFVerificationError`.
+
+## Development
+
+The repository uses uv for the complete development workflow:
+
+```console
+uv sync --locked
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy
+uv run pytest
+uv build --no-sources
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the test matrix and contribution
+workflow. Releases follow calendar versioning in the normalized
+`YYYY.M.D` form and are recorded in [CHANGELOG.md](CHANGELOG.md).
+
+## Current limitations
+
+- Reset the device under test before launching a new program.
+- The minimal FESVR proxy supports `write`, legacy exit, and exit calls.
+- Hardware behavior depends on the target's UART TSI implementation.
+
+Please report reproducible defects in the
+[issue tracker](https://github.com/ucb-bar/pyuartsi/issues).
+
+## Related implementations
+
+- [C++ UART TSI](https://github.com/ucb-bar/testchipip/tree/master/uart_tsi)
+- [Rust TSI](https://github.com/ucb-bar/tsi)
 

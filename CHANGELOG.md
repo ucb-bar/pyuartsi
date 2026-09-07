@@ -7,6 +7,7 @@ normalized `YYYY.M.D` form.
 
 ### Added
 
+- Multiple initial reads and writes per command, including inclusive read ranges.
 - A typed transport interface with deterministic serial-port cleanup and
   configurable read and write timeouts.
 - A `pyuartsi` console command with validated, hyphenated options.

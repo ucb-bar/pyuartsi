@@ -7,7 +7,7 @@ from importlib.metadata import version
 
 from .exceptions import PyUARTSIError
 from .fesvr import run_fesvr
-from .uart_tsi import DEFAULT_CACHE_FLUSH_ADDRESS, UARTTSI
+from .uart_tsi import DEFAULT_CACHE_FLUSH_ADDRESS, MAX_ADDRESS, UARTTSI, WORD_BYTES
 
 DEFAULT_BAUD_RATE = 115200
 HART0_MSIP_ADDRESS = 0x02000000
@@ -24,15 +24,43 @@ def _integer(value: str) -> int:
         raise argparse.ArgumentTypeError(f"invalid integer: {value!r}") from error
 
 
-def _initial_write(value: str) -> tuple[int, int]:
-    """Parse an ``ADDRESS=VALUE`` argument for argparse."""
+def _initial_writes(value: str) -> list[tuple[int, int]]:
+    """Parse semicolon-separated ``ADDRESS=VALUE`` arguments."""
+    writes = []
     try:
-        address_text, data_text = value.split("=", maxsplit=1)
-        return _integer(address_text), _integer(data_text)
+        for item in value.split(";"):
+            address_text, data_text = item.split("=", maxsplit=1)
+            writes.append((_integer(address_text.strip()), _integer(data_text.strip())))
     except (ValueError, argparse.ArgumentTypeError) as error:
         raise argparse.ArgumentTypeError(
-            "expected ADDRESS=VALUE using decimal or 0x-prefixed integers"
+            "expected ADDRESS=VALUE entries separated by semicolons"
         ) from error
+    return writes
+
+
+def _initial_reads(value: str) -> list[range]:
+    """Parse addresses and inclusive word ranges separated by semicolons."""
+    reads = []
+    try:
+        for item in value.split(";"):
+            bounds = [_integer(part.strip()) for part in item.split("~")]
+            if len(bounds) == 1:
+                start = end = bounds[0]
+            elif len(bounds) == 2:
+                start, end = bounds
+            else:
+                raise ValueError
+            if not 0 <= start <= end <= MAX_ADDRESS - (WORD_BYTES - 1):
+                raise ValueError
+            if (end - start) % WORD_BYTES:
+                raise ValueError
+            reads.append(range(start, end + 1, WORD_BYTES))
+    except (ValueError, argparse.ArgumentTypeError) as error:
+        raise argparse.ArgumentTypeError(
+            "expected ADDRESS or inclusive START~END word ranges separated by "
+            "semicolons"
+        ) from error
+    return reads
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -61,17 +89,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--init-write",
         "--init_write",
         dest="init_write",
-        type=_initial_write,
-        metavar="ADDRESS=VALUE",
-        help="write an initial 32-bit value",
+        action="extend",
+        type=_initial_writes,
+        metavar="ADDRESS=VALUE[;...]",
+        help="write one or more initial 32-bit values",
     )
     parser.add_argument(
         "--init-read",
         "--init_read",
         dest="init_read",
-        type=_integer,
-        metavar="ADDRESS",
-        help="read an initial 32-bit value",
+        action="extend",
+        type=_initial_reads,
+        metavar="ADDRESS[;...]",
+        help="read addresses or inclusive START~END word ranges",
     )
     parser.add_argument("--elf", help="ELF file to load or serve")
     parser.add_argument("--load", action="store_true", help="load the ELF file")
@@ -117,7 +147,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not any(
         (
             args.init_write,
-            args.init_read is not None,
+            args.init_read,
             args.load,
             args.hart0_msip,
             args.fesvr,
@@ -143,8 +173,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     show_progress=True,
                 )
 
-            if args.init_write is not None:
-                address, data = args.init_write
+            for address, data in args.init_write or ():
                 tsi.write_word(address, data)
                 print(f"W: {address:#x} <= {data:#x}")
 
@@ -153,9 +182,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 tsi.write_word(HART0_MSIP_ADDRESS, HART0_MSIP_VALUE)
                 print("Wrote to the hart 0 MSIP register")
 
-            if args.init_read is not None:
-                data = tsi.read_word(args.init_read)
-                print(f"R: {args.init_read:#x} => {data:#x}")
+            for addresses in args.init_read or ():
+                for address in addresses:
+                    data = tsi.read_word(address)
+                    print(f"R: {address:#x} => {data:#x}")
 
             if args.fesvr:
                 return run_fesvr(tsi, args.elf)

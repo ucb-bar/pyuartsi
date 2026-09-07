@@ -1,7 +1,3 @@
-"""Tests for the pyserial transport adapter."""
-
-from __future__ import annotations
-
 from collections import deque
 
 import pytest
@@ -13,8 +9,6 @@ from pyuartsi.transport import SerialTransport
 
 
 class FakeSerial:
-    """Small pyserial-compatible test double."""
-
     def __init__(self, chunks: list[bytes] | None = None) -> None:
         self.chunks = deque(chunks or [])
         self.write_limit = 1_000_000
@@ -43,8 +37,16 @@ class FakeSerial:
 
 
 def install_serial(monkeypatch: MonkeyPatch, fake: FakeSerial) -> None:
-    """Make SerialTransport construct a configured fake."""
-    monkeypatch.setattr(serial, "Serial", lambda **_kwargs: fake)
+    def create_serial(
+        port: str,
+        baudrate: int,
+        timeout: float | None,
+        write_timeout: float | None,
+    ) -> FakeSerial:
+        del port, baudrate, timeout, write_timeout
+        return fake
+
+    monkeypatch.setattr(serial, "Serial", create_serial)
 
 
 def test_serial_transport_reads_writes_and_closes(monkeypatch: MonkeyPatch) -> None:
@@ -79,7 +81,13 @@ def test_serial_write_timeout(monkeypatch: MonkeyPatch) -> None:
 
 
 def test_serial_open_error_is_wrapped(monkeypatch: MonkeyPatch) -> None:
-    def fail(**_kwargs: object) -> None:
+    def fail(
+        port: str,
+        baudrate: int,
+        timeout: float | None,
+        write_timeout: float | None,
+    ) -> None:
+        del port, baudrate, timeout, write_timeout
         raise serial.SerialException("no device")
 
     monkeypatch.setattr(serial, "Serial", fail)

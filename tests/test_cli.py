@@ -1,5 +1,3 @@
-"""Tests for command-line parsing and orchestration."""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -14,73 +12,55 @@ from pyuartsi import ProtocolError
 
 
 class FakeUARTTSI:
-    """Record CLI operations without opening hardware."""
-
-    instance: FakeUARTTSI | None = None
-
-    def __init__(
-        self,
-        port: str,
-        baudrate: int,
-        cache_flush_address: int,
-        *,
-        timeout: float,
-        write_timeout: float,
-    ) -> None:
-        self.arguments = (
-            port,
-            baudrate,
-            cache_flush_address,
-            timeout,
-            write_timeout,
-        )
+    def __init__(self) -> None:
         self.calls: list[tuple[object, ...]] = []
-        self.raise_on_read = False
-        FakeUARTTSI.instance = self
 
     def __enter__(self) -> FakeUARTTSI:
-        """Enter the fake connection."""
         return self
 
     def __exit__(
         self,
-        exception_type: type[BaseException] | None,
-        exception: BaseException | None,
-        traceback: TracebackType | None,
+        _exception_type: type[BaseException] | None,
+        _exception: BaseException | None,
+        _traceback: TracebackType | None,
     ) -> None:
-        """Record fake connection closure."""
-        del exception_type, exception, traceback
         self.calls.append(("close",))
 
     def load_elf(
         self,
         filename: str | Path,
         check: bool,
-        *,
         show_progress: bool,
     ) -> None:
-        """Record an ELF load."""
         self.calls.append(("load", filename, check, show_progress))
 
     def write_word(self, address: int, data: int) -> None:
-        """Record a word write."""
         self.calls.append(("write_word", address, data))
 
     def write_longword(self, address: int, data: int) -> None:
-        """Record a long-word write."""
         self.calls.append(("write_longword", address, data))
 
     def read_word(self, address: int) -> int:
-        """Return a deterministic word or raise a configured error."""
-        if self.raise_on_read:
-            raise ProtocolError("test failure")
         self.calls.append(("read_word", address))
         return 0xABCD
 
 
 def invoke(arguments: Sequence[str]) -> int:
-    """Invoke the CLI with a normal sequence type."""
     return cli.main(arguments)
+
+
+def install_tsi(monkeypatch: MonkeyPatch, tsi: FakeUARTTSI) -> None:
+    def create_tsi(
+        port: str,
+        baudrate: int,
+        cache_flush_address: int,
+        timeout: float,
+        write_timeout: float,
+    ) -> FakeUARTTSI:
+        del port, baudrate, cache_flush_address, timeout, write_timeout
+        return tsi
+
+    monkeypatch.setattr(cli, "UARTTSI", create_tsi)
 
 
 @pytest.mark.parametrize(
@@ -108,7 +88,8 @@ def test_memory_and_msip_actions(
     monkeypatch: MonkeyPatch,
     capsys: CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr(cli, "UARTTSI", FakeUARTTSI)
+    tsi = FakeUARTTSI()
+    install_tsi(monkeypatch, tsi)
 
     result = invoke(
         [
@@ -123,8 +104,7 @@ def test_memory_and_msip_actions(
     )
 
     assert result == 0
-    assert FakeUARTTSI.instance is not None
-    assert FakeUARTTSI.instance.calls == [
+    assert tsi.calls == [
         ("write_word", 0x10, 0x20),
         ("write_longword", cli.BOOT_ADDRESS, cli.BOOT_VALUE),
         ("write_word", cli.HART0_MSIP_ADDRESS, cli.HART0_MSIP_VALUE),
@@ -135,7 +115,8 @@ def test_memory_and_msip_actions(
 
 
 def test_load_and_fesvr_actions(monkeypatch: MonkeyPatch) -> None:
-    monkeypatch.setattr(cli, "UARTTSI", FakeUARTTSI)
+    tsi = FakeUARTTSI()
+    install_tsi(monkeypatch, tsi)
 
     def fake_fesvr(
         tsi: FakeUARTTSI,
@@ -159,8 +140,7 @@ def test_load_and_fesvr_actions(monkeypatch: MonkeyPatch) -> None:
     )
 
     assert result == 7
-    assert FakeUARTTSI.instance is not None
-    assert FakeUARTTSI.instance.calls == [
+    assert tsi.calls == [
         ("load", "program.elf", True, True),
         ("fesvr", "program.elf"),
         ("close",),
@@ -169,13 +149,11 @@ def test_load_and_fesvr_actions(monkeypatch: MonkeyPatch) -> None:
 
 def test_library_error_becomes_cli_exit(monkeypatch: MonkeyPatch) -> None:
     class FailingUARTTSI(FakeUARTTSI):
-        """Fake connection whose read always fails."""
-
         def read_word(self, address: int) -> int:
             del address
             raise ProtocolError("test failure")
 
-    monkeypatch.setattr(cli, "UARTTSI", FailingUARTTSI)
+    install_tsi(monkeypatch, FailingUARTTSI())
 
     with pytest.raises(SystemExit) as error_info:
         invoke(["--port", "COM1", "--init-read", "0"])

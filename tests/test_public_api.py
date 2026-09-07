@@ -1,5 +1,3 @@
-"""Tests for the deliberate package export surface."""
-
 import pyuartsi
 
 

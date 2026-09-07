@@ -1,11 +1,9 @@
 """Minimal front-end server proxy for programs accessed through UART TSI."""
 
-from __future__ import annotations
-
 import struct
 import sys
 from os import PathLike
-from typing import BinaryIO, cast
+from typing import BinaryIO, TextIO, cast
 
 from .exceptions import ProtocolError
 from .uart_tsi import UARTTSI, FESVRSyscall
@@ -21,37 +19,24 @@ def _acknowledge(tsi: UARTTSI, tohost: int, fromhost: int) -> None:
     tsi.write_longword(fromhost, 1, flush_cache=True)
 
 
-def _binary_stream(stream_name: str) -> BinaryIO:
-    stream = getattr(sys, stream_name)
+def _binary_stream(stream: TextIO) -> BinaryIO:
     binary_stream = getattr(stream, "buffer", None)
     if binary_stream is None:
-        raise ProtocolError(f"{stream_name} does not expose a binary buffer")
+        raise ProtocolError("standard stream does not expose a binary buffer")
     return cast(BinaryIO, binary_stream)
 
 
 def run_fesvr(
     tsi: UARTTSI,
     filename: str | PathLike[str],
-    *,
     stdout: BinaryIO | None = None,
     stderr: BinaryIO | None = None,
 ) -> int:
-    """Serve FESVR requests until the device exits.
-
-    Args:
-        tsi: Open UART TSI connection.
-        filename: ELF file containing the optional ``.htif`` section.
-        stdout: Binary destination for file descriptor 1.
-        stderr: Binary destination for file descriptor 2.
-
-    Returns:
-        Exit status requested by the device.
-
-    Raises:
-        ProtocolError: If the device sends an invalid or unsupported request.
-    """
-    stdout = stdout or _binary_stream("stdout")
-    stderr = stderr or _binary_stream("stderr")
+    """Serve FESVR requests until the device returns an exit status."""
+    if stdout is None:
+        stdout = _binary_stream(sys.stdout)
+    if stderr is None:
+        stderr = _binary_stream(sys.stderr)
     htif_base = tsi.get_htif_base(filename)
     tohost = htif_base
     fromhost = htif_base + 8

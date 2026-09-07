@@ -1,7 +1,3 @@
-"""Opt-in smoke tests for a connected UART TSI target."""
-
-from __future__ import annotations
-
 import os
 
 import pytest

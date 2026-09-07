@@ -1,7 +1,3 @@
-"""Tests for the minimal FESVR proxy."""
-
-from __future__ import annotations
-
 import io
 import struct
 from collections import deque
@@ -15,20 +11,16 @@ from pyuartsi.fesvr import run_fesvr
 
 
 class FakeTSI:
-    """In-memory FESVR-facing UARTTSI double."""
-
     def __init__(self, pointers: list[int], memory: dict[int, bytes]) -> None:
         self._pointers = deque(pointers)
         self._memory = memory
         self.writes: list[tuple[int, int, bool]] = []
 
     def get_htif_base(self, filename: str | PathLike[str]) -> int:
-        """Return a deterministic HTIF base."""
         del filename
         return 0x80000000
 
     def read_longword(self, address: int, flush_cache: bool = False) -> int:
-        """Return the next queued request pointer."""
         del address, flush_cache
         return self._pointers.popleft()
 
@@ -38,7 +30,6 @@ class FakeTSI:
         size: int,
         flush_cache: bool = False,
     ) -> bytes:
-        """Read configured request or payload bytes."""
         del flush_cache
         return self._memory[address][:size]
 
@@ -48,12 +39,10 @@ class FakeTSI:
         data: int,
         flush_cache: bool = False,
     ) -> None:
-        """Record an acknowledgement write."""
         self.writes.append((address, data, flush_cache))
 
 
 def as_uart_tsi(fake: FakeTSI) -> UARTTSI:
-    """Cast a complete test double to the concrete public API type."""
     return cast(UARTTSI, fake)
 
 

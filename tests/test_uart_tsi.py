@@ -1,7 +1,3 @@
-"""Tests for the core UART TSI protocol."""
-
-from __future__ import annotations
-
 import struct
 from collections.abc import Iterator
 from pathlib import Path
@@ -16,7 +12,6 @@ from pyuartsi import UARTTSI, ELFVerificationError, ProtocolError
 
 
 def make_tsi(transport: FakeTransport) -> UARTTSI:
-    """Create a protocol instance backed by a fake transport."""
     return UARTTSI("unused", 115_200, transport=transport)
 
 
@@ -132,8 +127,6 @@ def test_context_manager_closes_once_and_rejects_later_operations() -> None:
 
 
 class FakeSection:
-    """Small ELF section double."""
-
     def __init__(self, name: str, address: object, payload: bytes) -> None:
         self.name = name
         self.header: dict[str, object] = {
@@ -143,25 +136,20 @@ class FakeSection:
         self._payload = payload
 
     def data(self) -> bytes:
-        """Return section data."""
         return self._payload
 
 
 class FakeELFFile:
-    """ELF file double with configurable sections."""
-
     sections: ClassVar[list[FakeSection]] = []
 
-    def __init__(self, stream: BinaryIO) -> None:
-        del stream
+    def __init__(self, _stream: BinaryIO) -> None:
+        pass
 
     def iter_sections(self) -> Iterator[FakeSection]:
-        """Yield configured sections."""
         yield from self.sections
 
 
 def install_fake_elf(monkeypatch: MonkeyPatch, sections: list[FakeSection]) -> None:
-    """Replace pyelftools with the local deterministic double."""
     FakeELFFile.sections = sections
     monkeypatch.setattr(uart_module, "ELFFile", FakeELFFile)
 

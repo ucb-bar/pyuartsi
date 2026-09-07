@@ -1,8 +1,4 @@
-"""Python implementation of the UART Tethered Serial Interface.
-
-The package exports :class:`UARTTSI` for device access, public protocol enums,
-and exceptions callers can use for structured error handling.
-"""
+"""Python implementation of the UART Tethered Serial Interface."""
 
 from .exceptions import (
     ELFVerificationError,

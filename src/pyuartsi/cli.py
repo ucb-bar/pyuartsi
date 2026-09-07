@@ -1,7 +1,5 @@
 """Command-line interface for PyUARTSI."""
 
-from __future__ import annotations
-
 import argparse
 import logging
 from collections.abc import Sequence
@@ -108,73 +106,59 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _validate_arguments(
-    parser: argparse.ArgumentParser,
-    arguments: argparse.Namespace,
-) -> None:
-    if arguments.self_check and not arguments.load:
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the PyUARTSI command-line interface."""
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.self_check and not args.load:
         parser.error("--self-check requires --load")
-    if (arguments.load or arguments.fesvr) and not arguments.elf:
+    if (args.load or args.fesvr) and not args.elf:
         parser.error("--load and --fesvr require --elf")
     if not any(
         (
-            arguments.init_write,
-            arguments.init_read is not None,
-            arguments.load,
-            arguments.hart0_msip,
-            arguments.fesvr,
+            args.init_write,
+            args.init_read is not None,
+            args.load,
+            args.hart0_msip,
+            args.fesvr,
         )
     ):
         parser.error("select at least one read, write, load, MSIP, or FESVR action")
-    if arguments.timeout < 0:
+    if args.timeout < 0:
         parser.error("--timeout must be non-negative")
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    """Run the PyUARTSI command-line interface.
-
-    Args:
-        argv: Optional argument sequence excluding the program name.
-
-    Returns:
-        A process exit status.
-    """
-    parser = build_parser()
-    arguments = parser.parse_args(argv)
-    _validate_arguments(parser, arguments)
 
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
     try:
         with UARTTSI(
-            arguments.port,
-            arguments.baud_rate,
-            arguments.cache_flush_address,
-            timeout=arguments.timeout,
-            write_timeout=arguments.timeout,
+            args.port,
+            args.baud_rate,
+            args.cache_flush_address,
+            timeout=args.timeout,
+            write_timeout=args.timeout,
         ) as tsi:
-            if arguments.load:
+            if args.load:
                 tsi.load_elf(
-                    arguments.elf,
-                    arguments.self_check,
+                    args.elf,
+                    args.self_check,
                     show_progress=True,
                 )
 
-            if arguments.init_write is not None:
-                address, data = arguments.init_write
+            if args.init_write is not None:
+                address, data = args.init_write
                 tsi.write_word(address, data)
                 print(f"W: {address:#x} <= {data:#x}")
 
-            if arguments.hart0_msip:
+            if args.hart0_msip:
                 tsi.write_longword(BOOT_ADDRESS, BOOT_VALUE)
                 tsi.write_word(HART0_MSIP_ADDRESS, HART0_MSIP_VALUE)
                 print("Wrote to the hart 0 MSIP register")
 
-            if arguments.init_read is not None:
-                data = tsi.read_word(arguments.init_read)
-                print(f"R: {arguments.init_read:#x} => {data:#x}")
+            if args.init_read is not None:
+                data = tsi.read_word(args.init_read)
+                print(f"R: {args.init_read:#x} => {data:#x}")
 
-            if arguments.fesvr:
-                return run_fesvr(tsi, arguments.elf)
+            if args.fesvr:
+                return run_fesvr(tsi, args.elf)
     except (OSError, PyUARTSIError, ValueError) as error:
         parser.exit(1, f"pyuartsi: error: {error}\n")
     return 0

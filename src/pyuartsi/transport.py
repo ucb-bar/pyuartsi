@@ -1,7 +1,5 @@
 """Transport abstractions for UART TSI communication."""
 
-from __future__ import annotations
-
 from typing import Protocol
 
 import serial
@@ -29,21 +27,10 @@ class SerialTransport:
         self,
         port: str,
         baudrate: int,
-        *,
         timeout: float | None = 10.0,
         write_timeout: float | None = 10.0,
     ) -> None:
-        """Open and prepare a serial port.
-
-        Args:
-            port: Serial device name, such as ``COM20`` or ``/dev/ttyUSB0``.
-            baudrate: Serial baud rate.
-            timeout: Maximum seconds for each serial read, or ``None`` to block.
-            write_timeout: Maximum seconds for each write, or ``None`` to block.
-
-        Raises:
-            TransportError: If the serial port cannot be opened or prepared.
-        """
+        """Open and prepare a serial port."""
         try:
             self._serial = serial.Serial(
                 port=port,
@@ -59,18 +46,7 @@ class SerialTransport:
             ) from error
 
     def read_exact(self, size: int) -> bytes:
-        """Read exactly ``size`` bytes.
-
-        Args:
-            size: Number of bytes to read.
-
-        Returns:
-            Bytes read from the serial port.
-
-        Raises:
-            TransportTimeoutError: If the configured timeout expires.
-            TransportError: If pyserial reports another read failure.
-        """
+        """Read exactly ``size`` bytes or raise a transport error."""
         data = bytearray()
         try:
             while len(data) < size:
@@ -85,15 +61,7 @@ class SerialTransport:
         return bytes(data)
 
     def write_all(self, data: bytes) -> None:
-        """Write all bytes to the serial port.
-
-        Args:
-            data: Bytes to transmit.
-
-        Raises:
-            TransportTimeoutError: If the configured write timeout expires.
-            TransportError: If pyserial reports another write failure.
-        """
+        """Write every byte or raise a transport error."""
         offset = 0
         try:
             while offset < len(data):

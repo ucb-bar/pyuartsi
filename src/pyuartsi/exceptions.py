@@ -21,13 +21,7 @@ class ELFVerificationError(PyUARTSIError):
     """Indicate that data read from the device differs from an ELF section."""
 
     def __init__(self, address: int, expected: bytes, actual: bytes) -> None:
-        """Initialize an ELF verification failure.
-
-        Args:
-            address: Device address at which the mismatch occurred.
-            expected: Bytes obtained from the ELF file.
-            actual: Bytes read back from the device.
-        """
+        """Describe a read-back mismatch at ``address``."""
         self.address = address
         self.expected = expected
         self.actual = actual

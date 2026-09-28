@@ -37,10 +37,7 @@ def run_fesvr(
         stdout = _binary_stream(sys.stdout)
     if stderr is None:
         stderr = _binary_stream(sys.stderr)
-    htif_base = tsi.get_htif_base(filename)
-    tohost = htif_base
-    fromhost = htif_base + 8
-    tsi.write_longword(tohost, 0)
+    tohost, fromhost = tsi.get_htif_addresses(filename)
 
     while True:
         request_pointer = tsi.read_longword(tohost, flush_cache=True)

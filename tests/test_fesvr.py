@@ -16,9 +16,9 @@ class FakeTSI:
         self._memory = memory
         self.writes: list[tuple[int, int, bool]] = []
 
-    def get_htif_base(self, filename: str | PathLike[str]) -> int:
+    def get_htif_addresses(self, filename: str | PathLike[str]) -> tuple[int, int]:
         del filename
-        return 0x80000000
+        return 0x80000000, 0x80000008
 
     def read_longword(self, address: int, flush_cache: bool = False) -> int:
         del address, flush_cache
@@ -61,7 +61,7 @@ def test_write_request_is_forwarded_and_acknowledged() -> None:
 
     assert run_fesvr(as_uart_tsi(fake), "program.elf", stdout=stdout) == 7
     assert stdout.getvalue() == b"hello"
-    assert fake.writes[-2:] == [
+    assert fake.writes == 2 * [
         (0x80000000, 0, False),
         (0x80000008, 1, True),
     ]

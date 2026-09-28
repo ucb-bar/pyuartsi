@@ -83,9 +83,15 @@ def test_word_operations_validate_integer_ranges() -> None:
         tsi.write_longword(0, -1)
 
 
+def test_cache_flush_is_disabled_by_default() -> None:
+    transport = FakeTransport()
+    make_tsi(transport).flush_cache_lines(0, 65)
+    assert transport.writes == []
+
+
 def test_cache_flush_covers_address_zero_and_crossed_lines() -> None:
     transport = FakeTransport()
-    tsi = make_tsi(transport)
+    tsi = UARTTSI("unused", 115_200, cflush_addr=0x02010200, transport=transport)
 
     tsi.flush_cache_lines(0, 65)
 
@@ -139,6 +145,15 @@ class FakeSection:
         return self._payload
 
 
+class FakeSymbolTable(FakeSection):
+    def __init__(self, symbols: dict[str, int]) -> None:
+        super().__init__(".symtab", None, b"")
+        self._symbols = symbols
+
+    def get_symbol_by_name(self, name: str) -> list[dict[str, int]] | None:
+        return [{"st_value": self._symbols[name]}] if name in self._symbols else None
+
+
 class FakeELFFile:
     sections: ClassVar[list[FakeSection]] = []
 
@@ -147,6 +162,11 @@ class FakeELFFile:
 
     def iter_sections(self) -> Iterator[FakeSection]:
         yield from self.sections
+
+    def get_section_by_name(self, name: str) -> FakeSection | None:
+        return next(
+            (section for section in self.sections if section.name == name), None
+        )
 
 
 def install_fake_elf(monkeypatch: MonkeyPatch, sections: list[FakeSection]) -> None:
@@ -219,3 +239,20 @@ def test_get_htif_base_uses_section_or_default(
 
     install_fake_elf(monkeypatch, [])
     assert tsi.get_htif_base(elf_path) == uart_module.DEFAULT_HTIF_BASE
+
+
+def test_get_htif_addresses_uses_symbols_or_htif_base(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    elf_path = tmp_path / "program.elf"
+    elf_path.write_bytes(b"")
+    tsi = make_tsi(FakeTransport())
+    htif = FakeSection(".htif", 0x9000, b"")
+    symtab = FakeSymbolTable({"fromhost": 0x9000, "tohost": 0x9008})
+
+    install_fake_elf(monkeypatch, [htif, symtab])
+    assert tsi.get_htif_addresses(elf_path) == (0x9008, 0x9000)
+
+    install_fake_elf(monkeypatch, [htif])
+    assert tsi.get_htif_addresses(elf_path) == (0x9000, 0x9008)

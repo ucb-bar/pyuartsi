@@ -101,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=_integer,
         default=DEFAULT_CACHE_FLUSH_ADDRESS,
         metavar="ADDRESS",
-        help="cache-control base address (default: %(default)#x)",
+        help="cache-flush register, or 0 to not flush (default: %(default)#x)",
     )
     return parser
 

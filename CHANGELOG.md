@@ -12,6 +12,8 @@ normalized `YYYY.M.D` form.
 - A `pyuartsi` console command with validated, hyphenated options.
 - Unit tests, strict type checking, Ruff checks, distribution smoke tests, and
   a supported-Python CI matrix.
+- `UARTTSI.get_htif_addresses()`, which returns the `tohost` and `fromhost`
+  addresses from the ELF symbols.
 
 ### Changed
 
@@ -20,6 +22,16 @@ normalized `YYYY.M.D` form.
 - Updated package licensing to PEP 639 SPDX metadata.
 - Made ELF self-check failures raise `ELFVerificationError`.
 - Split serial transport, protocol, FESVR, and CLI responsibilities.
+- `--cflush-addr` defaults to 0, which disables cache flushes. On designs with
+  a SiFive L2 cache, set it to `0x02010200`.
+
+### Fixed
+
+- `--fesvr` no longer stops the TSI link on designs without an L2 cache.
+- `--fesvr` finds `tohost` and `fromhost` from the ELF symbols. Baremetal-IDE
+  programs put `fromhost` first.
+- `--fesvr` no longer clears `tohost` on start, which lost the first request of
+  a running program.
 
 ### Removed
 

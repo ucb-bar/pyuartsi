@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 
 WORD_BYTES = 4
 CACHE_LINE_BYTES = 64
-DEFAULT_CACHE_FLUSH_ADDRESS = 0x02010200
+DEFAULT_CACHE_FLUSH_ADDRESS = 0
 DEFAULT_HTIF_BASE = 0x80000000
 DEFAULT_CHUNK_BYTES = 1024
 MAX_ADDRESS = (1 << 64) - 1
@@ -170,7 +170,7 @@ class UARTTSI:
     def flush_cache_lines(self, address: int, size: int) -> None:
         """Flush every cache line covering the requested memory range."""
         self._validate_range(address, size)
-        if size == 0:
+        if size == 0 or not self.cflush_addr:
             return
 
         line_address = address & ~(CACHE_LINE_BYTES - 1)
@@ -276,6 +276,23 @@ class UARTTSI:
                         actual = self.read_bytes(address, len(expected))
                         if actual != expected:
                             raise ELFVerificationError(address, expected, actual)
+
+    def get_htif_addresses(self, filename: str | PathLike[str]) -> tuple[int, int]:
+        """Return the ELF ``(tohost, fromhost)`` symbol addresses.
+
+        Without both symbols, ``tohost`` is the ``.htif`` base and ``fromhost``
+        is the next word.
+        """
+        with Path(filename).open("rb") as stream:
+            elf_file = ELFFile(stream)  # type: ignore[no-untyped-call]
+            symtab = elf_file.get_section_by_name(".symtab")  # type: ignore[no-untyped-call]
+            if symtab is not None:
+                tohost = symtab.get_symbol_by_name("tohost")
+                fromhost = symtab.get_symbol_by_name("fromhost")
+                if tohost and fromhost:
+                    return int(tohost[0]["st_value"]), int(fromhost[0]["st_value"])
+        base = self.get_htif_base(filename)
+        return base, base + 8
 
     def get_htif_base(self, filename: str | PathLike[str]) -> int:
         """Return the ELF ``.htif`` address or the standard default."""

@@ -43,9 +43,15 @@ Read and write target memory:
 ```console
 uv run pyuartsi --port /dev/ttyUSB0 --init-read 0x02000000
 uv run pyuartsi --port /dev/ttyUSB0 \
-  --init-write 0x80000000=0xdeadbeef \
-  --init-read 0x80000000
+  --init-write "0x80000000=0xdeadbeef;0x80000004=0xcafebabe" \
+  --init-read "0x80000000;0x80000004"
+uv run pyuartsi --port /dev/ttyUSB0 \
+  --init-read 0x80000000~0x8000000c
 ```
+
+Read ranges are inclusive and advance in four-byte words. Read and write
+options can also be repeated. Quote semicolon-separated values because shells
+otherwise interpret the semicolon as a command separator.
 
 The default serial read and write timeout is 10 seconds. Use `--timeout` to
 change it. Underscore spellings of legacy options remain available for

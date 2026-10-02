@@ -78,9 +78,19 @@ def test_invalid_argument_relationships_exit(arguments: list[str]) -> None:
     assert error_info.value.code == 2
 
 
-def test_initial_write_parser_reports_bad_values() -> None:
+@pytest.mark.parametrize(
+    ("option", "value"),
+    [
+        ("--init-write", "broken"),
+        ("--init-write", "0x10=1;broken"),
+        ("--init-read", "0x10~0xc"),
+        ("--init-read", "0x10~0x13"),
+        ("--init-read", "0~0x10000000000000000"),
+    ],
+)
+def test_initial_action_parser_reports_bad_values(option: str, value: str) -> None:
     with pytest.raises(SystemExit) as error_info:
-        invoke(["--port", "COM1", "--init-write", "broken"])
+        invoke(["--port", "COM1", option, value])
     assert error_info.value.code == 2
 
 
@@ -96,9 +106,11 @@ def test_memory_and_msip_actions(
             "--port",
             "COM1",
             "--init_write",
-            "0x10=0x20",
+            "0x10=0x20; 0x14=0x24",
             "--init_read",
-            "0x10",
+            "0x10; 0x14~0x1c",
+            "--init-read",
+            "0x20",
             "--hart0_msip",
         ]
     )
@@ -106,9 +118,14 @@ def test_memory_and_msip_actions(
     assert result == 0
     assert tsi.calls == [
         ("write_word", 0x10, 0x20),
+        ("write_word", 0x14, 0x24),
         ("write_longword", cli.BOOT_ADDRESS, cli.BOOT_VALUE),
         ("write_word", cli.HART0_MSIP_ADDRESS, cli.HART0_MSIP_VALUE),
         ("read_word", 0x10),
+        ("read_word", 0x14),
+        ("read_word", 0x18),
+        ("read_word", 0x1C),
+        ("read_word", 0x20),
         ("close",),
     ]
     assert "0xabcd" in capsys.readouterr().out.lower()
